@@ -20,20 +20,22 @@ namespace TimeGhost
             forward,
             right
         }
-        public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
-        public DirectionPattern directionPattern; // イメージの提示パターン // 图像提示的模式
+        
         public Camera captureCamera1; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
         public Camera captureCamera2; // 一定の距離ごとに写真を撮るためのカメラ // 用于间隔一定距离拍照的摄像机
+        public Image grayImage;
+        public GameObject canvas;
         public float cameraSpeed = 4f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
-        public float fps = 60f; // 他のfps // 其他的fps
+     
 
         private float trialTime = 1 * 60 * 1000f;//实验的总时间
         public float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
-        public GameObject canvas;
+
         private Transform preImageTransform;
         private Transform nextImageTransform;
         private RawImage preImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
         private RawImage nextImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
+
         private float cylinderHeight; // 円柱の高さ (m) // 圆柱的高度，m
 
         public float updateInterval; // 更新間隔 (秒) // 更新间隔，单位秒
@@ -45,6 +47,9 @@ namespace TimeGhost
         public string participantName;
         private string experimentalCondition;
         public int trialNumber;
+        public float fps = 60f; // 他のfps // 其他的fps
+        public Pattern movementPattern; // イメージの提示パターン // 图像提示的模式
+        public DirectionPattern directionPattern; // イメージの提示パターン // 图像提示的模式
 
         private List<string> data = new List<string>();
         private float startTime;
@@ -52,8 +57,8 @@ namespace TimeGhost
         private string folderName = "ExperimentData"; // サブフォルダ名 // 子文件夹名称
         private float timeMs; // 現在までの経過時間 // 运行到现在的时间
         private Vector3 direction;
+        //private float bufferDurTime = 0f;//10000f;
         private float bufferDurTime = 10000f;//10000f;
-        public Image grayImage;
         private Vector3 targetPosition;      // FixedUpdate 的目标位置
         private Quaternion rightMoveRotation = Quaternion.Euler(0, 48.5f, 0);
         private Quaternion forwardMoveRotation = Quaternion.Euler(0, 146.8f, 0);
@@ -81,21 +86,24 @@ namespace TimeGhost
                     direction = worldForwardDirection;
                     captureCamera2.transform.rotation = Quaternion.Euler(0, 146.8f, 0);
                     captureCamera1.transform.rotation = Quaternion.Euler(0, 146.8f, 0);
-                    captureCamera2.transform.position = new Vector3(30.5f, 26f, 160.4f);
-                    captureCamera1.transform.position = new Vector3(30.5f, 26f, 160.4f);
+                    captureCamera2.transform.position = new Vector3(30.5f, 28f, 160.4f);
+                    captureCamera1.transform.position = new Vector3(30.5f, 28f, 160.4f);
                     break;
                 case DirectionPattern.right:
                     direction = worldRightDirection;
                     captureCamera2.transform.rotation = Quaternion.Euler(0, 48.5f, 0);
                     captureCamera1.transform.rotation = Quaternion.Euler(0, 48.5f, 0);
-                    captureCamera2.transform.position = new Vector3(4f, 26f, 130f);
-                    captureCamera1.transform.position = new Vector3(4f, 26f, 130f);
+                    captureCamera2.transform.position = new Vector3(4f, 28f, 130f);
+                    captureCamera1.transform.position = new Vector3(4f, 28f, 130f);
                     break;
             }
             switch (movementPattern)
             {
                 case Pattern.continuous:
                     data.Add("FrameNum,Time,Vection Response");
+                    experimentalCondition = movementPattern.ToString() + "_"
+                                         + "cameraSpeed" + cameraSpeed.ToString() + "_"
+                                         + "fps60";
                     break;
                 case Pattern.wobble:
                     data.Add("FrameNum,Time,Vection Response");
@@ -108,12 +116,13 @@ namespace TimeGhost
                     nextImageRawImage.enabled = true;
                     captureCamera2.transform.position += direction * captureIntervalDistance;
                     Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
+                    experimentalCondition = movementPattern.ToString() + "_"
+                                         + "cameraSpeed" + cameraSpeed.ToString() + "_"
+                                         + "fps" + fps.ToString();
                     break;
             }
 
-            experimentalCondition = movementPattern.ToString() + "_"
-                                                     + "cameraSpeed" + cameraSpeed.ToString() + "_"
-                                                     + "fps" + fps.ToString();
+
             StartCoroutine(ShowGrayScreen(bufferDurTime / 1000));
         }
         IEnumerator ShowGrayScreen(float duration)
@@ -129,7 +138,7 @@ namespace TimeGhost
             timeMs = (Time.time - startTime) * 1000;
 
             // キーの状態をチェック // 检测按键状态
-            if (Input.GetKey(KeyCode.Keypad1))
+            if (Input.GetKey(KeyCode.Alpha1))
             {
                 vectionResponse = true;
             }
