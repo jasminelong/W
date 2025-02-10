@@ -81,7 +81,7 @@ namespace TimeGhost
             captureIntervalDistance = cameraSpeed / fps; // 各フレームの間隔距離を計算 // 计算每帧之间的间隔距离
 
             Vector3 worldRightDirection = rightMoveRotation * Vector3.right;
-            Debug.Log("worldRightDirection---"+ worldRightDirection);
+            //Debug.Log("worldRightDirection---"+ worldRightDirection);
             Vector3 worldForwardDirection = forwardMoveRotation * Vector3.forward;
             GetRawImage();
             switch (directionPattern)
@@ -122,7 +122,7 @@ namespace TimeGhost
                     Image1RawImage.enabled = true;
                     Image2RawImage.enabled = true;
                     captureCamera2.transform.position += direction * captureIntervalDistance;
-                    Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
+                    //Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
                     experimentalCondition = movementPattern.ToString() + "_"
                                          + "cameraSpeed" + cameraSpeed.ToString() + "_"
                                          + "fps" + fps.ToString();
@@ -169,8 +169,8 @@ namespace TimeGhost
         }
         void Continuous()
         {
-            Debug.Log("timeMs----" + timeMs);
-            Debug.Log("bufferDurTime----" + bufferDurTime);
+            //Debug.Log("timeMs----" + timeMs);
+            //Debug.Log("bufferDurTime----" + bufferDurTime);
             if (timeMs < bufferDurTime)
             {
                 // データを記録 // 记录数据
@@ -182,7 +182,7 @@ namespace TimeGhost
                 // 更新 FixedUpdate 起始位置
                 // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置right 
                 Vector3 targetPosition = captureCamera0.transform.position + direction * cameraSpeed * Time.fixedDeltaTime;
-                Debug.Log("targetPosition----------" + targetPosition);
+                //Debug.Log("targetPosition----------" + targetPosition);
                 // カメラを目標位置に移動 // 移动摄像机到目标位置
                 captureCamera0.transform.position = targetPosition;
 
@@ -217,7 +217,7 @@ namespace TimeGhost
 /*                Image1RawImage.enabled = false;
                 Image2RawImage.enabled = false;*/
                 // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
-                Debug.Log("frameNum--" + frameNum + "dt------" + Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000));
+                //Debug.Log("frameNum--" + frameNum + "dt------" + Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000));
                 if (Mathf.Abs((timeMs - bufferDurTime) - frameNum * updateInterval * 1000) < 0.1f)
                 {
                     frameNum++;
@@ -227,8 +227,8 @@ namespace TimeGhost
                     Image2RawImage.color = new Color(Image2RawImage.color.r, Image2RawImage.color.g, Image2RawImage.color.b, 0);
                     // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
                     targetPosition = direction * cameraSpeed * updateInterval * 2;
-                    Debug.Log("captureCamera1.transform.position----" + captureCamera1.transform.position);
-                    Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
+                    //Debug.Log("captureCamera1.transform.position----" + captureCamera1.transform.position);
+                    //Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
 
                     // カメラを目標位置に移動 // 移动摄像机到目标位置
                     if (frameNum % 2 == 0)
@@ -362,7 +362,7 @@ namespace TimeGhost
             string filePath = Path.Combine("D:/vectionProject/public", folderName, fileName);
             File.WriteAllLines(filePath, data);
 
-            Debug.Log($"Data saved to {filePath}");
+            //Debug.Log($"Data saved to {filePath}");
         }
 
     }
