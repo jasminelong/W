@@ -5,8 +5,7 @@ using UnityEngine.UI;
 using System;
 using System.IO;
 
-namespace TimeGhost
-{
+
     public class MoveCamera : MonoBehaviour
     {
         public enum Pattern
@@ -27,9 +26,9 @@ namespace TimeGhost
         public Image grayImage;
         public GameObject canvas;
         public float cameraSpeed = 4f; // カメラが円柱の軸に沿って移動する速度 (m/s) // 摄像机沿圆柱轴线移动的速度，m/s
-     
+        public Material BrightnessMaterial; // 在 Inspector 里赋值 Material
 
-        private float trialTime = 1 * 60 * 1000f;//实验的总时间
+    private float trialTime = 1 * 180 * 1000f;//实验的总时间
         public float captureIntervalDistance; // 撮影間隔の距離 (m) // 拍摄间隔距离，m
 
         private Transform continuousImageTransform;
@@ -38,7 +37,7 @@ namespace TimeGhost
         private RawImage continuousImageRawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
         private RawImage Image1RawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
         private RawImage Image2RawImage;// 撮影した画像を表示するためのUIコンポーネント // 用于显示拍摄图像的UI组件
-
+        
 
         public float updateInterval; // 更新間隔 (秒) // 更新间隔，单位秒
         private float updateTimer = 0f;
@@ -66,7 +65,14 @@ namespace TimeGhost
         private Quaternion rightMoveRotation = Quaternion.Euler(0, 48.5f, 0);
         private Quaternion forwardMoveRotation = Quaternion.Euler(0, 146.8f, 0);
         private bool isChanged = false;
+        private SerialReader SerialReader;
         // Start is called before the first frame update
+
+        // 数据保留的时长（例如，只保留最近10秒的数据）
+        public float recordDuration = 1f;
+        public AnimationCurve recordedCurve1 = new AnimationCurve();
+        public AnimationCurve recordedCurve2 = new AnimationCurve();
+
         void Start()
         {
             startTime = Time.time;
@@ -129,7 +135,7 @@ namespace TimeGhost
                     break;
             }
 
-
+            SerialReader = GetComponent<SerialReader>();
             StartCoroutine(ShowGrayScreen(bufferDurTime / 1000));
         }
         IEnumerator ShowGrayScreen(float duration)
@@ -181,7 +187,8 @@ namespace TimeGhost
                 continuousImageRawImage.enabled = true;
                 // 更新 FixedUpdate 起始位置
                 // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置right 
-                Vector3 targetPosition = captureCamera0.transform.position + direction * cameraSpeed * Time.fixedDeltaTime;
+                //Vector3 targetPosition = captureCamera0.transform.position + direction * cameraSpeed * Time.fixedDeltaTime;
+                Vector3 targetPosition = captureCamera0.transform.position + direction * (SerialReader.lastSensorValue + 0f) * cameraSpeed * Time.fixedDeltaTime;
                 //Debug.Log("targetPosition----------" + targetPosition);
                 // カメラを目標位置に移動 // 移动摄像机到目标位置
                 captureCamera0.transform.position = targetPosition;
@@ -205,73 +212,82 @@ namespace TimeGhost
        
         void LuminanceMixture()
         {
-            //Debug.Log("111111111captureCamera1.transform.position----" + captureCamera1.transform.position);
-            //Debug.Log("1111111111111captureCamera2.transform.position----" + captureCamera2.transform.position);
-            if (timeMs < bufferDurTime)
+        //Debug.Log("111111111captureCamera1.transform.position----" + captureCamera1.transform.position);
+        //Debug.Log("1111111111111captureCamera2.transform.position----" + captureCamera2.transform.position);
+        if (timeMs < bufferDurTime)
+        {
+            // データを記録 // 记录数据
+            data.Add($"0, 0, 0, 0, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
+        }
+        else if (timeMs >= bufferDurTime && timeMs <= (bufferDurTime + trialTime))
+        {
+            /*                Image1RawImage.enabled = false;
+                            Image2RawImage.enabled = false;*/
+            // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
+            //Debug.Log("frameNum--" + frameNum + "dt------" + Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000));
+            if (Mathf.Abs((timeMs - bufferDurTime) - frameNum * updateInterval * 1000) < 0.1f)
             {
-                // データを記録 // 记录数据
-                data.Add($"0, 0, 0, 0, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
-            }
-            else if (timeMs >= bufferDurTime && timeMs <= (bufferDurTime + trialTime))
-            {
-/*                Image1RawImage.enabled = false;
-                Image2RawImage.enabled = false;*/
-                // 写真を撮る距離に達したかをチェック // 检查是否到了拍照的距离
-                //Debug.Log("frameNum--" + frameNum + "dt------" + Mathf.Abs(timeMs - bufferDurTime - frameNum * updateInterval * 1000));
-                if (Mathf.Abs((timeMs - bufferDurTime) - frameNum * updateInterval * 1000) < 0.1f)
-                {
-                    frameNum++;
-                    Image1RawImage.enabled = false;
-                    Image2RawImage.enabled = false;
-                    Image1RawImage.color = new Color(Image1RawImage.color.r, Image1RawImage.color.g, Image1RawImage.color.b, 0);
-                    Image2RawImage.color = new Color(Image2RawImage.color.r, Image2RawImage.color.g, Image2RawImage.color.b, 0);
-                    // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
-                    targetPosition = direction * cameraSpeed * updateInterval * 2;
-                    //Debug.Log("captureCamera1.transform.position----" + captureCamera1.transform.position);
-                    //Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
+                frameNum++;
+                Image1RawImage.enabled = false;
+                Image2RawImage.enabled = false;
+                Image1RawImage.color = new Color(Image1RawImage.color.r, Image1RawImage.color.g, Image1RawImage.color.b, 0);
+                Image2RawImage.color = new Color(Image2RawImage.color.r, Image2RawImage.color.g, Image2RawImage.color.b, 0);
+                // カメラが円柱の軸に沿って移動する目標位置を計算 // 计算摄像机沿圆锥轴线移动的目标位置
+                targetPosition = direction * cameraSpeed * updateInterval * 2;
+                //Debug.Log("captureCamera1.transform.position----" + captureCamera1.transform.position);
+                //Debug.Log("captureCamera2.transform.position----" + captureCamera2.transform.position);
 
-                    // カメラを目標位置に移動 // 移动摄像机到目标位置
-                    if (frameNum % 2 == 0)
-                    {
-                        captureCamera1.transform.position = captureCamera1.transform.position + targetPosition; ;
-                    }
-                    else
-                    {
-                        captureCamera2.transform.position = captureCamera2.transform.position + targetPosition; ;
-                    }
-                  
+                // カメラを目標位置に移動 // 移动摄像机到目标位置
+                if (frameNum % 2 == 0)
+                {
+                    captureCamera1.transform.position = captureCamera1.transform.position + targetPosition; ;
                 }
-                //輝度値を計算する
-                float Image1ToNowDeltaTime = timeMs - bufferDurTime - (frameNum - 1) * updateInterval * 1000;
-                float nextRatio = Image1ToNowDeltaTime / (updateInterval * 1000);
-                float nextImageRatio = nextRatio > 1.0f ? 1.0f : nextRatio;
-                nextImageRatio = nextImageRatio < 0 ? 0 : nextImageRatio;
+                else
+                {
+                    captureCamera2.transform.position = captureCamera2.transform.position + targetPosition; ;
+                }
+
+            }
+            //輝度値を計算する 
+            float Image1ToNowDeltaTime = timeMs - bufferDurTime - (frameNum - 1) * updateInterval * 1000;
+            float nextRatio = Image1ToNowDeltaTime / (updateInterval * 1000);
+            float nextImageRatio = nextRatio > 1.0f ? 1f : nextRatio;
+            nextImageRatio = nextImageRatio < 0 ? 0f : nextImageRatio;
+ 
+            Debug.Log("nextImageRatio : " + nextImageRatio + "    timeMs : " + timeMs + "     frameNum : " + frameNum + "     updateInterval : "+ updateInterval);
+  
                 //nextImageRatio = nextImageRatio < 0.8f ? 0.8f : nextImageRatio;
                 float previousImageRatio = 1.0f - nextImageRatio;
-                //previousImageRatio = previousImageRatio < 0.8f ? 0.8f : previousImageRatio;
+            //previousImageRatio = previousImageRatio < 0.8f ? 0.8f : previousImageRatio;
 
-                if (frameNum % 2 == 0)
+            Debug.Log("beforeImage1RawImage.color.r" + Image1RawImage.color.r + "  " + Image1RawImage.color.g + "  " + Image1RawImage.color.b + "  " + Image1RawImage.color.a);
+            if (frameNum % 2 == 0)
                 {
                     Image1RawImage.color = new Color(Image1RawImage.color.r, Image1RawImage.color.g, Image1RawImage.color.b, nextImageRatio);
                     Image2RawImage.color = new Color(Image2RawImage.color.r, Image2RawImage.color.g, Image2RawImage.color.b, previousImageRatio);
-                }
+               // Image1RawImage.color = new Color(Image1RawImage.color.r * nextImageRatio, Image1RawImage.color.g * nextImageRatio, Image1RawImage.color.b * nextImageRatio, Image1RawImage.color.a);
+               // Image2RawImage.color = new Color(Image2RawImage.color.r * previousImageRatio, Image2RawImage.color.g * previousImageRatio, Image2RawImage.color.b * previousImageRatio, Image2RawImage.color.a);
+            }
                 else
                 {
                     Image1RawImage.color = new Color(Image1RawImage.color.r, Image1RawImage.color.g, Image1RawImage.color.b, previousImageRatio);
                     Image2RawImage.color = new Color(Image2RawImage.color.r, Image2RawImage.color.g, Image2RawImage.color.b, nextImageRatio);
-                }
- 
 
+                //Image1RawImage.color = new Color(Image1RawImage.color.r * previousImageRatio, Image1RawImage.color.g * previousImageRatio, Image1RawImage.color.b * previousImageRatio, Image1RawImage.color.a);
+               // Image2RawImage.color = new Color(Image2RawImage.color.r * nextImageRatio, Image2RawImage.color.g * nextImageRatio, Image2RawImage.color.b * nextImageRatio, Image2RawImage.color.a);
+            }
+
+            Debug.Log("Image1RawImage.color.r"+ Image1RawImage.color.r+"  "+ Image1RawImage.color.g +"  "+ Image1RawImage.color.b +"  " + Image1RawImage.color.a);
                 // Canvasに親オブジェクトを設定し、元のローカル位置、回転、およびスケールを保持 // 设置父对象为 Canvas，并保持原始的本地位置、旋转和缩放
                 Image1RawImage.transform.SetParent(canvas.transform, false);
                 Image2RawImage.transform.SetParent(canvas.transform, false);
                 Image1RawImage.enabled = true;
                 Image2RawImage.enabled = true;
 
-
-                // データを記録 // 记录数据
-                //data.Add($"{frameNum}, {previousImageRatio:F3}, {frameNum + 1}, {Image2Ratio:F3}, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
-                data.Add($"{frameNum}, {Image1RawImage.color.a:F3}, {frameNum + 1}, {Image2RawImage.color.a:F3}, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
+            RecordVariable(Image1RawImage.color.a, Image2RawImage.color.a);
+            // データを記録 // 记录数据
+            //data.Add($"{frameNum}, {previousImageRatio:F3}, {frameNum + 1}, {Image2Ratio:F3}, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
+            data.Add($"{frameNum}, {Image1RawImage.color.a:F3}, {frameNum + 1}, {Image2RawImage.color.a:F3}, {timeMs - bufferDurTime:F3}, {(vectionResponse ? 1 : 0)}");
             }
             else if (timeMs > (bufferDurTime + trialTime) && timeMs <= (trialTime + 2 * bufferDurTime))
             {
@@ -287,7 +303,30 @@ namespace TimeGhost
                 QuitGame();
             }
         }
-        void GetRawImage()
+
+
+     void RecordVariable(float Image1RawImage, float Image2RawImage)
+    {
+        // 记录第一个变量
+        Keyframe newKey1 = new Keyframe(Time.time, Image1RawImage);
+        recordedCurve1.AddKey(newKey1);
+
+        // 记录第二个变量
+        Keyframe newKey2 = new Keyframe(Time.time, Image2RawImage);
+        recordedCurve2.AddKey(newKey2);
+
+        // 清理超时关键帧（只保留 recordDuration 秒内的数据）
+        float threshold = Time.time - recordDuration;
+        while (recordedCurve1.keys.Length > 0 && recordedCurve1.keys[0].time < threshold)
+        {
+            recordedCurve1.RemoveKey(0);
+        }
+        while (recordedCurve2.keys.Length > 0 && recordedCurve2.keys[0].time < threshold)
+        {
+            recordedCurve2.RemoveKey(0);
+        }
+    }
+    void GetRawImage()
         {
             // Canvas内で指定された名前の子オブジェクトを検索 // 在 Canvas 中查找指定名称的子对象
             canvas = GameObject.Find("Canvas");
@@ -366,4 +405,4 @@ namespace TimeGhost
         }
 
     }
-}
+

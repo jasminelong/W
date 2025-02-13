@@ -39,7 +39,7 @@ public class SerialReader : MonoBehaviour
 
     // 用于保存最新的传感器数值，在后台线程和主线程之间共享
     // 最新のセンサーデータを保存し、バックグラウンドスレッドとメインスレッドで共有
-    private float lastSensorValue;
+    public float lastSensorValue;
     private readonly object lockObject = new object();
 
     //--------------------------------------------------------------------------
